@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Chat App</title>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+	<link rel="stylesheet" type="txt/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+	<!-- <link rel="stylesheet" type="txt/css" href="chat.css"> -->
+</head>
+
+<body>
+	<div class="container">
+		<div class="row">
+			<div class="page-header">
+				<h1> Simple Chat App <small> much simple</small></h1>
+			</div>
+		</div>	
+		<div class="row">
+			<div class="col-sm-6">
+				<div class="mount_content"></div>
+				<button id="get_new" class="btn" style="margin-left:10px;">Update</button>
+			</div>
+			<div class="col-sm-6">
+				<div  style="margin:10px;">
+				<textarea class="new_post" style="width:100%;height:100px"> </textarea>
+				
+				<button class="btn" id="new_post" style="float:right;">Submit</button>
+				<p class="message" style="float:left;"></p>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+<script>
+var seen_messages = []
+$(document).ready(function() {
+
+	// Generate a user ID
+	var gen_id = parseInt(Math.random() * 100000)
+	
+	function new_posts(dont_clear) {
+		request = $.ajax({
+			url: "http://localhost:8080/api/messages",
+			type: "GET"
+		})
+		request.done(function (data) {
+			$(".mount_content").empty()
+			display_counter = 0;
+			data.forEach(function (d) {
+				var id = d.name
+				var message_id = d.id;
+				var message = d.message;
+				if (seen_messages.indexOf(message_id) == -1) {
+					if (id != gen_id) {
+						var well = '<div class="well" style="margin:10px;">' + '<p>' + message.toString() + '</p>'+ '<div class="username" style="text-align:right;">' + id + '</div>' + '</div>'
+						$(".mount_content").append(well)
+						display_counter += 1;
+					}
+				}
+			})
+			if (display_counter == 0) {
+				var well = '<div class="well" style="margin:10px;">' + '<p>' + "No Messages To Display" + '</p>'+ '</div>'
+				$(".mount_content").append(well)
+			}
+			if (dont_clear == true) {
+				// DONT CLEAR
+			} else {
+				data.forEach(function (d) {
+					var message_id = d.id;
+					seen_messages.push(message_id);
+				})
+			}
+		});
+	}
+	new_posts(true);
+
+	// Making it real time, but it's messy with all the ajax calls
+	// it would be better to do it with a server push
+	setInterval(function () {
+		new_posts(true)
+	}, 1000);
+
+	$("#get_new").click(function (e) {
+		new_posts(false)
+	});
+
+	$("#new_post").click(function (e) {
+		if (gen_id !== null) {
+			var message_id = parseInt(Math.random() * 100000)
+			submit_request = $.ajax({
+				url: "http://localhost:8080/api/messages",
+				type: "POST",
+				data: {
+					id: message_id,
+					name: gen_id,
+					message: $(".new_post").val(),
+					done: false
+
+				}
+			})
+			submit_request.done(function(data) {
+				if (data.completed == 1) {
+					console.log("success");
+					$(".new_post").val("");
+					$(".message").text("Message Submitted");
+					setInterval(function () {
+						$(".message").empty();
+					}, 3000)
+				}
+			});
+
+		} else {
+			console.log("No User ID");
+
+		}
+	})
+
+
+})
+</script>
+</html>
